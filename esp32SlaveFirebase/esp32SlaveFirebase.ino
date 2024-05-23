@@ -1,6 +1,8 @@
-#include <Wire.h>
+#include <Arduino.h>
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
+#include <Wire.h>
+#include "time.h"
 
 // Provide the token generation process info.
 #include "addons/TokenHelper.h"
@@ -18,8 +20,8 @@
 #define USER_EMAIL "parking@gmail.com"
 #define USER_PASSWORD "haikalMurjaLGay"
 
-// Insert Firebase Realtime Database URL
-#define DATABASE_URL "https://parking-ezz-default-rtdb.asia-southeast1.firebasedatabase.app/"  // Replace with your database URL
+// Insert RTDB URL
+#define DATABASE_URL "https://parking-ezz-default-rtdb.asia-southeast1.firebasedatabase.app/"
 
 // Define Firebase objects
 FirebaseData fbdo;
@@ -29,12 +31,33 @@ FirebaseConfig config;
 // Variable to save USER UID
 String uid;
 
-// Alamat I2C slave
-const int slaveAddress = 0x08;
+// Database main path (to be updated in setup with the user UID)
+String databasePath;
+// Database child nodes
+String distancePath = "/distance";
+String timePath = "/timestamp";
 
-// Variabel untuk menyimpan data yang diterima
+// Parent Node (to be updated in every loop)
+String parentPath;
+
+int timestamp;
+FirebaseJson json;
+
+const char* ntpServer = "pool.ntp.org";
+
+// Timer variables (send new readings every three minutes)
+unsigned long sendDataPrevMillis = 0;
+unsigned long timerDelay = 5000;
+
+// Variables for I2C
+const int slaveAddress = 0x08;
 int receivedDistance = 0;
 
+// Timer for I2C
+unsigned long receiveDataPrevMillis = 0;
+unsigned long receiveDataInterval = 5000; // Interval untuk menerima data dari I2C setiap 5 detik
+
+// Initialize WiFi
 void initWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi ..");
@@ -46,11 +69,22 @@ void initWiFi() {
   Serial.println();
 }
 
+// Function that gets current epoch time
+unsigned long getTime() {
+  time_t now;
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    //Serial.println("Failed to obtain time");
+    return(0);
+  }
+  time(&now);
+  return now;
+}
+
 void setup() {
   Serial.begin(115200);
-
-  // Initialize WiFi
   initWiFi();
+  configTime(0, 0, ntpServer);
 
   // Assign the api key (required)
   config.api_key = API_KEY;
@@ -85,47 +119,44 @@ void setup() {
   Serial.print("User UID: ");
   Serial.println(uid);
 
-  // Inisialisasi komunikasi I2C sebagai slave dengan alamat tertentu
-  Wire.begin(slaveAddress);
+  // Update database path
+  databasePath = "/UsersData/" + uid + "/readings";
 
-  // Menetapkan fungsi callback untuk menerima data
+  // Initialize I2C as slave
+  Wire.begin(slaveAddress);
   Wire.onReceive(receiveData);
 }
 
 void loop() {
-  // Cek apakah token Firebase sudah kedaluwarsa
-  if (Firebase.isTokenExpired()) {
-    Firebase.refreshToken(&config);
-    Serial.println("Refresh token");
+  // Send new readings to database
+  if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)) {
+    sendDataPrevMillis = millis();
+
+    // Get current timestamp
+    timestamp = getTime();
+    Serial.print("time: ");
+    Serial.println(timestamp);
+
+    parentPath = databasePath;
+    json.set(distancePath, String(receivedDistance)); // Include the received distance data
+    json.set(timePath, String(timestamp));
+
+    Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
+  }
+
+  // Receive data from I2C
+  if (millis() - receiveDataPrevMillis > receiveDataInterval) {
+    receiveDataPrevMillis = millis();
+    // Data reception is handled in the receiveData function called by Wire.onReceive
   }
 }
 
 void receiveData(int byteCount) {
-  byte data[2];
-  int index = 0;
-
-  // Membaca data dari I2C buffer
-  while (Wire.available() && index < 2) {
-    data[index] = Wire.read();
-    index++;
+  while (Wire.available()) {
+    receivedDistance = Wire.read();
   }
 
-  if (index == 2) {
-    // Mengkonversi data dari byte array menjadi integer
-    receivedDistance = (data[0] << 8) | data[1];
-
-    // Tampilkan data yang diterima di Serial Monitor
-    Serial.print("Distance received: ");
-    Serial.println(receivedDistance);
-
-    // Kirim data ke Firebase
-    if (Firebase.RTDB.setInt(&fbdo, "users/" + uid + "/distance", receivedDistance)) {
-      Serial.println("Data sent to Firebase successfully");
-    } else {
-      Serial.print("Failed to send data to Firebase: ");
-      Serial.println(fbdo.errorReason());
-    }
-  } else {
-    Serial.println("Failed to receive complete data.");
-  }
+  // Tampilkan data yang diterima di Serial Monitor
+  Serial.print("Distance received: ");
+  Serial.println(receivedDistance);
 }
