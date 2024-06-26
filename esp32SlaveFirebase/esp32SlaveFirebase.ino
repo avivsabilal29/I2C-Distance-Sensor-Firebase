@@ -13,6 +13,10 @@
 #define WIFI_SSID "Synapsis.id Head Office"
 #define WIFI_PASSWORD "synaps1sjkt23@"
 
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 0;
+const int   daylightOffset_sec = 3600;
+
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyBTPoD5A-8KDFBV0ycFKhJGHXyQxcUiMOU"
 
@@ -42,8 +46,6 @@ String parentPath;
 
 int timestamp;
 FirebaseJson json;
-
-const char* ntpServer = "pool.ntp.org";
 
 // Timer variables (send new readings every three minutes)
 unsigned long sendDataPrevMillis = 0;
@@ -75,7 +77,7 @@ unsigned long getTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
     //Serial.println("Failed to obtain time");
-    return(0);
+    return (0);
   }
   time(&now);
   return now;
@@ -140,7 +142,8 @@ void loop() {
     parentPath = databasePath;
     json.set(distancePath, String(receivedDistance)); // Include the received distance data
     json.set(timePath, String(timestamp));
-
+    printLocalTime();
+    Serial.println(timeInfo);
     Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
   }
 
@@ -159,4 +162,65 @@ void receiveData(int byteCount) {
   // Tampilkan data yang diterima di Serial Monitor
   Serial.print("Distance received: ");
   Serial.println(receivedDistance);
+}
+
+
+// Function that gets current epoch time
+void printLocalTime() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  Serial.print("Day of week: ");
+  Serial.println(&timeinfo, "%A");
+  Serial.print("Month: ");
+  Serial.println(&timeinfo, "%B");
+  Serial.print("Day of Month: ");
+  Serial.println(&timeinfo, "%d");
+  Serial.print("Year: ");
+  Serial.println(&timeinfo, "%Y");
+  Serial.print("Hour: ");
+  Serial.println(&timeinfo, "%H");
+  Serial.print("Hour (12 hour format): ");
+  Serial.println(&timeinfo, "%I");
+  Serial.print("Minute: ");
+  Serial.println(&timeinfo, "%M");
+  Serial.print("Second: ");
+  Serial.println(&timeinfo, "%S");
+
+  Serial.println("Time variables");
+  char timeHour[3];
+  strftime(timeHour, 3, "%H", &timeinfo);
+  Serial.println(timeHour);
+
+
+  // Menambahkan angka 7 ke timeHour
+  int hourOffset = 7;
+  int currentHour = atoi(timeHour);
+  currentHour = (currentHour + hourOffset) % 24; // Menghindari nilai yang melebihi 24 jam
+  sprintf(timeHour, "%02d", currentHour);
+
+
+  char timeWeekDay[10];
+  strftime(timeWeekDay, 10, "%A", &timeinfo);
+  Serial.println(timeWeekDay);
+  char timeYear[6];
+  strftime(timeYear, 10, "%Y", &timeinfo);
+  Serial.println(timeYear);
+  char timeMonth[12];
+  strftime(timeMonth, 12, "%B", &timeinfo);
+  Serial.println(timeMonth);
+  char timeDate[3];
+  strftime(timeDate, 3, "%d", &timeinfo);
+  Serial.println(timeDate);
+  char timeMinute[3];
+  strftime(timeMinute, 3, "%M", &timeinfo);
+  Serial.println(timeMinute);
+  Serial.println();
+  String timeInfo = String(timeWeekDay) + ", " + String(timeDate) + " " + String(timeMonth) + " " + String(timeYear) + ", " + String(timeHour) + ":" + String(timeMinute);
+
+  Serial.print("Time Info : ");
+  Serial.println(timeInfo);
 }
