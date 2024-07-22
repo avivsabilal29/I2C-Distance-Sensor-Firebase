@@ -17,7 +17,7 @@ void setupServerFunction() {
   uid = auth.token.uid.c_str();
   Serial.print("User UID: ");
   Serial.println(uid);
-  databasePath = "/UsersData/" + uid + "/readings";
+  databasePath = "/UsersData/" + uid + "/" + device;
 
 }
 

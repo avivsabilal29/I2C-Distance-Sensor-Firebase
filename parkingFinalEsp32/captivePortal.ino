@@ -8,8 +8,9 @@ void setupCaptivePortal() {
   preferences.begin("my-pref", false);
 
   is_setup_done = preferences.getBool("is_setup_done", false);
-  ssid = preferences.getString("rec_ssid", "Sample_SSID");
-  password = preferences.getString("rec_password", "abcdefgh");
+  ssid = preferences.getString("rec_ssid", "haikalMurjal");
+  password = preferences.getString("rec_password", "haikalMurjal");
+  device = preferences.getString("rec_device", "haikalMurjal");
   if (!is_setup_done)
   {
     StartCaptivePortal();
@@ -19,7 +20,8 @@ void setupCaptivePortal() {
     Serial.println("Using saved SSID and Password to attempt WiFi Connection!");
     Serial.print("Saved SSID is "); Serial.println(ssid);
     Serial.print("Saved Password is "); Serial.println(password);
-    WiFiStationSetup(ssid, password);
+    Serial.print("Saved device ID is "); Serial.println(device);
+    WiFiStationSetup(ssid, password, device);
   }
 
   while (!is_setup_done)
@@ -29,7 +31,7 @@ void setupCaptivePortal() {
     if (valid_ssid_received && valid_password_received)
     {
       Serial.println("Attempting WiFi Connection!");
-      WiFiStationSetup(ssid, password);
+      WiFiStationSetup(ssid, password, device);
     }
   }
 
@@ -116,6 +118,14 @@ void setupServer() {
       Serial.println(inputMessage);
       valid_password_received = true;
     }
+
+    if (request->hasParam("device")) {
+      inputMessage = request->getParam("device")->value();
+      inputParam = "device";
+      device = inputMessage;
+      Serial.println(inputMessage);
+      valid_device_received = true;
+    }
     request->send(200, "text/html", "The values entered by you have been successfully sent to the device. It will now attempt WiFi connection");
   });
 }
@@ -129,7 +139,7 @@ void WiFiSoftAPSetup()
 }
 
 
-void WiFiStationSetup(String rec_ssid, String rec_password)
+void WiFiStationSetup(String rec_ssid, String rec_password, String rec_device)
 {
   wifi_timeout = false;
   WiFi.mode(WIFI_STA);
@@ -172,6 +182,7 @@ void WiFiStationSetup(String rec_ssid, String rec_password)
     preferences.putBool("is_setup_done", is_setup_done);
     preferences.putString("rec_ssid", rec_ssid);
     preferences.putString("rec_password", rec_password);
+    preferences.putString("rec_device", rec_device);
   }
 }
 

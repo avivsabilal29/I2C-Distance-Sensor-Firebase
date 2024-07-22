@@ -25,8 +25,8 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-String uid, databasePath, parentPath, ssid, password;
-bool is_setup_done = false; bool valid_ssid_received = false; bool valid_password_received = false; bool wifi_timeout = false;
+String uid, databasePath, parentPath, ssid, password, device;
+bool is_setup_done = false; bool valid_ssid_received = false; bool valid_password_received = false; bool valid_device_received = false; bool wifi_timeout = false;
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600; const int slaveAddress = 0x08;
