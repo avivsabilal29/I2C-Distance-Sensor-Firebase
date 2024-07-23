@@ -34,6 +34,7 @@ void serverHandleFunction() {
     Serial.println(timestamp);
 
     parentPath = databasePath;
+    json.set(deviceNamePath, String(device)); 
     json.set(distancePath, String(receivedDistance)); 
     json.set(timePath, String(timestamp));
     json.set(statusParkPath, String(statusPark));

@@ -31,7 +31,7 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 3600; const int slaveAddress = 0x08;
 unsigned long sendDataPrevMillis = 0; unsigned long receiveDataPrevMillis = 0; unsigned long timerDelay = 5000; unsigned long receiveDataInterval = 5000;
-String distancePath = "/distance"; String timePath = "/timestamp"; String statusParkPath = "/status";
+String distancePath = "/distance"; String timePath = "/timestamp"; String statusParkPath = "/status"; String deviceNamePath = "/name";
 int timestamp; int statusPark = 0; int receivedDistance = 0;
 FirebaseJson json;
 
